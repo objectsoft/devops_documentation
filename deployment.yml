@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-1-deployment
+  labels:
+    app: devops-1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: devops-1
+  template:
+    metadata:
+      labels:
+        app: devops-1
+    spec:
+      containers:
+      - name: devops-1
+        image: hdossani/devops
+        ports:
+        - containerPort: 8080
