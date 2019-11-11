@@ -1,0 +1,28 @@
+
+- name: Create a sandbox instance
+  hosts: localhost
+  gather_facts: False
+  vars:
+    instance_type: t2.micro
+    image: ami-007dbcbce3118978b
+    region: ca-central-1
+  tasks:
+    - name: Launch instance
+      ec2:
+         instance_type: "{{ instance_type }}"
+         image: "{{ image }}"
+         wait: true
+         region: "{{ region }}"
+         count: 2
+      register: ec2
+
+- name: Terminate instances
+  hosts: localhost
+  vars:
+    region: ca-central-1
+  tasks:
+    - name: Terminate instances that were previously launched
+      ec2:
+        state: absent
+        region: '{{ region }}'
+        instance_ids: '{{ ec2.instance_ids }}'

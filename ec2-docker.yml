@@ -1,0 +1,87 @@
+
+- name: Create a sandbox instance
+  hosts: localhost
+  gather_facts: False
+  
+
+  vars:
+    instance_type: t2.micro
+    image: ami-007dbcbce3118978b
+    region: ca-central-1
+  tasks:
+    - name: Launch instance
+      ec2:
+         instance_type: "{{ instance_type }}"
+         image: "{{ image }}"
+         wait: true
+         region: "{{ region }}"
+         count: 1
+      register: ec2
+    
+    - name: Update all packages
+      become: yes
+      yum:
+        name: '*'
+        state: latest
+        update_only: yes
+
+    - name: Ensure a list of yum packages are installed
+      become: yes
+      yum:
+        name: "{{ packages }}"
+        state: latest
+        update_cache: yes
+      vars:
+        packages:
+        - python-pip
+        - yum-utils
+        - amazon-linux-extras
+    - name: Install docker-ce 
+      become: yes
+      shell: "amazon-linux-extras install docker -y"
+
+    - name: Enable Docker CE service at startup
+      become: yes
+      service:
+        name: docker
+        state: started
+        enabled: yes
+    - name: pull an image
+      become: yes
+      docker_image:
+        name: hdossani/microservices
+        source: pull
+    - name: run a container
+      become: yes
+      docker_container:
+        name: devops
+        image: hdossani/microservices
+        state: started
+        ports:
+        - "80:8080"
+
+    - name: Get infos on container
+      docker_container_info:
+        name: devops
+      register: result
+
+    - name: Does container exist?
+      debug:
+        msg: "The container {{ 'exists' if result.exists else 'does not exist' }}"
+
+    - name: Print information about container
+      debug:
+        var: result.container
+      when: result.exists
+
+
+- name: Terminate instances
+  hosts: localhost
+  vars:
+    region: ca-central-1
+  tasks:
+    - name: Terminate instances that were previously launched
+      ec2:
+        state: absent
+        region: '{{ region }}'
+        instance_ids: '{{ ec2.instance_ids }}'
